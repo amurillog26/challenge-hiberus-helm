@@ -1,0 +1,33 @@
+name: Update Helm Charts
+
+on:
+  workflow_dispatch:
+  repository_dispatch:
+    types: [update-charts]
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Update image tag
+        run: |
+          sed -i 's/tag: ".*"/tag: "${{ github.event.client_payload.image_tag }}"/' myapp/values.yaml
+
+      - name: Commit changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add myapp/values.yaml
+          git commit -m "Update image tag to ${{ github.event.client_payload.image_tag }}"
+          git push
+
+      - name: Trigger ArgoCD Sync
+        run: |
+          # Trigger ArgoCD sync here if required, example:
+          curl -X POST https://argocd-server/api/v1/applications/myapp/sync -H "Authorization: Bearer $ARGOCD_TOKEN"
+        env:
+          ARGOCD_TOKEN: ${{ secrets.ARGOCD_TOKEN }}
